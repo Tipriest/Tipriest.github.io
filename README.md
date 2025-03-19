@@ -1,1 +1,0 @@
-# Tipriest.github.io
