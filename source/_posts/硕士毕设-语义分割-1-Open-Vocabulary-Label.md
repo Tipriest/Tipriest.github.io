@@ -1,0 +1,44 @@
+---
+title: 硕士毕设-语义分割-1-Open-Vocabulary-Label
+date: 2025-03-28 19:17:59
+tags: 硕士毕设 弱监督语义分割
+---
+## 零: 项目说明
+是这样的一个事情，经过与deepseek的一番讨论和交流，DeepSeek为我设计了一个30天高强度学习计划，重点聚焦弱监督/无监督语义分割在野外场景的应用，结合理论与实践，并最终导向可落地的开源项目。目前开始了计划学习的第一天：
+
+主要想法是做基于大模型的弱监督语义分割，主要步骤如下：
+- **自动生成标注**：大模型生成`图像级标签`，`边框`，`涂鸦`、`点标注`等几种弱监督标注类型的标注：
+- **生成伪标签**：采用基于`类激活图(CAM, Class Activation Mapping)`的方法 + `CRF后处理`，利用分类网络生成伪标签pseudo
+- **训练分割模型**：将伪标签作为监督信号，训练`U-Net`、`DeepLabv3+`等分割网络。
+
+代码在这里：不断改进中：
+https://github.com/Tipriest/30Days-for-segmentation
+## 一: 自动生成图像级标注
+- 前面的对视频提取帧，最后的效果大致就是这样：
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/11354fcbeec44f5197ec04eacd576c0b.png)
+- 然后再提取关键帧，提取关键帧的代码也很简单，提取之后的结果：
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/41012b9b079a4486994d0e9b92f69e72.png)
+
+
+### 采用CLIP生成图像级标注
+CLIP这个模型很有意思，可以形成图像-文本对，也就是给定一系列的词，给定一张图片，可以选择出最高可能性的图片，比如下图所示，能够以极高的概率确定我的这个图片是一只狗。
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/85213f0cd8fb4301906936ef9ee0d1fd.png#pic_center =450x)
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/516050e6526c4fec93df0d311bd2f29d.png)
+但是我的图片是类似下图所示的这种图片，所以直接使用CLIP的话，给定一个词汇表会导致模型没办法输出一个唯一正确的结果，实际应用起来的效果并不好，就像是下面的这个[CVPR工作](https://zhuanlan.zhihu.com/p/686235457?utm_medium=social&utm_psn=1878022984981168128&utm_source=wechat_session)所展示的，一张图片没有办法分类渔民还是鱼儿，这篇文章的解决方案是加入mask或者是bounding box来提升对于局部区域的识别准确率。
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/e22873bfb33c41e3bec004b8d952c11f.png#pic_center =700x)
+- 才知道出名的llava视觉语言模型的基座是CLIP
+- 上面的那种方法效果是挺好的，但是在我的这个任务中，我使用CLIP本身其实就是不想再使用人工进行标注，而是完全使得标注流程自动化，因此这种方法也并不适用于我的课题场景。
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/2586610c42f44c88b678911f70b725e2.jpeg#pic_center =600x)
+- 拿右边的`groundtruth`是我标注的，可以看到如果只使用CLIP去标注一个图片的话，效果还是比较差，准确率不是很高，这里是把词汇列表中可能阈值大于0.2的都列举出来作为图像标注。
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/2f318fa3ce134cdc99893e66e428e23e.png#pic_center =1000x)
+简单统计一下准确率和召回率，这里其实可以看到对于主要的grass和soil这种作为主体比较好分辨的场景，还是能够有比较高的概率分辨出来的，主要是召回率不太行，尤其是对`yellow brick road`和`curb`，这两个的召回率差了不少，感觉就是一个图片做多场景分类还是比较勉强，或许加一个相同层的mask是一个可以接受的选择?找一下DINO这样子，然后随机采样一些点，然后获得mask，在用mask+CLIP的这个方案来做一点事情，但是还在考虑...
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/eed91708b1a54a56b2e9d75f2f99d242.png#pic_center =500x)
+### 1.2 采用Deepseek:14b大模型生成图像级标注
+之前学了一下DataWhale的handy-ollama的课程，可以在本地部署大模型，能够做图片理解，我是RTX4080super的显卡，所以可以部署deepseek:14B这样的模型以及llava这样的多模态的模型，尝试用了一下，用了llava，然后用json格式固定了输出写到csv文件中，然后再用calF1.py计算准确率和召回率。
+这个是用`llava模型`做了一个简单的计算，但是效果相比上一个CLIP模型，在准确率和召回率上其实都差了不少。
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/609d89ce4f6b4635bd7c9244b59064fc.png#pic_center =500x)
+llava模型其实也是基于`CLIP模型`作为基座的，但是这个准确率着实一般，我感觉可能是我ollama部署的这个llava模型参数量还是太小了，知识储备可能不是很够用，想看一下有没有别的可以部署的ViT模型做一下图片理解+标注。
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/c92a5b8a68af4054a00f859e347674d1.png#pic_center =300x)
+下载了一个13B的llava模型试一下，感觉效果上好了一些，但是还是不如直接使用CLIP模型的效果，有点奇怪，另外确实发现了修改提示词对于准确度的提升影响非常大，想办法能不能实验出一个好点的提示词，尤其是关于yellow brick road这种，可以在提示词里做一点手脚，比如解释一下这样子，又变成提示词工程师了[doge]
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/bc41df276fc1441aa54ba427339d9a8f.png#pic_center =500x)
+发现paperwithcode上有一些在各种测试集上的open vocabulary segmentation的相关工作，准备要尝试一下，下一篇文章再记录吧
