@@ -2,6 +2,7 @@
 title: faiss库介绍
 tags:
   - Python
+date: 2025-04-02
 ---
 Faiss（Facebook AI Similarity Search）是由Meta（原Facebook）开发的高效相似性搜索和密集向量聚类库，专为处理大规模向量数据设计。以下是其核心要点：
 
