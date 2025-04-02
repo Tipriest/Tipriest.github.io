@@ -1,3 +1,7 @@
+---
+title: 调用Qwen API进行标注
+date: 2025-03-30
+---
 `Qwen2.5`有一个`CookBook`
 <https://zhuanlan.zhihu.com/p/21417326672>
 `Qwen2.5` Cookbooks都干了点啥:
