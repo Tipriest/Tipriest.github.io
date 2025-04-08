@@ -1,8 +1,8 @@
 ---
-title: openai库介绍
+title: wandb库介绍
 tags:
   - Python
-date: 2025-04-02
+date: 2025-04-08
 ---
 以下是Python的`openai`库的详细介绍，结合参考资料和实际应用场景整理：
 
