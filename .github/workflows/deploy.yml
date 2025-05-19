@@ -1,0 +1,36 @@
+name: Deploy Hexo
+on:
+  push:
+    branches: [ main ]  # 触发分支（如main/master）
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'  # 指定Node.js版本
+
+      - name: Install Pandoc  # 
+        run: sudo apt-get install pandoc -y
+
+      - name: Install Hexo Dependencies
+        run: |
+          npm install -g hexo-cli
+          npm install
+
+      - name: Build & Deploy
+        run: |
+          hexo clean
+          hexo generate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # 自动使用GitHub Token
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public  # Hexo生成的静态文件目录
